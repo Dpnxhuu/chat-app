@@ -37,10 +37,15 @@ export default async function Home() {
   }
 
   // users list me lastMessage jod do
-  const usersWithLastMessage = users.map((user) => ({
+  const usersWithLastMessage = users.map((user) => {
+  const lastMsg = lastMessageMap.get(user.id);
+  return {
     ...user,
-    lastMessage: lastMessageMap.get(user.id) ?? null,
-  }));
+    lastMessage: lastMsg
+      ? { ...lastMsg, createdAt: lastMsg.createdAt.toISOString() }
+      : null,
+  };
+});
 
   return (
     <ChatLayout

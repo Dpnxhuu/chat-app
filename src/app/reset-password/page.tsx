@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 
-export default function ResetPasswordPage() {
+function ResetPassword() {
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
@@ -122,5 +122,13 @@ export default function ResetPasswordPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function ResetPasswordPage(){
+  return (
+    <Suspense fallback={"Loading..."}>
+      <ResetPassword/>
+    </Suspense>
   )
 }

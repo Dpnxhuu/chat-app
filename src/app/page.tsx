@@ -2,11 +2,11 @@
 
 import Link from "next/link"
 import { signIn } from "next-auth/react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 
-export default function LoginPage() {
+function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -245,4 +245,13 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+
+export default function LoginPage(){
+  return(
+    <Suspense fallback={"Loading..."}>
+      <Login/>
+    </Suspense>
+  )
 }
