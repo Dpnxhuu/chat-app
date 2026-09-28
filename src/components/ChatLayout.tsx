@@ -200,7 +200,7 @@ export default function ChatLayout({
               />
 
               <span className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-sm text-black">
-                3
+                0
               </span>
             </button>
 
