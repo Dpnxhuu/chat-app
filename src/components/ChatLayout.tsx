@@ -8,6 +8,7 @@ import { pusherClient } from "@/lib/pusher-client";
 
 type Message = {
   id: string;
+  clientKey?: string; // NAYA — temp aur real message ke liye same key
   text: string;
   senderId: string;
   receiverId: string;
@@ -119,19 +120,47 @@ export default function ChatLayout({
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!input.trim() || !selectedUser) return;
+    const text = input.trim();
+    if (!text || !selectedUser) return;
 
-    const res = await fetch("/api/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ receiverId: selectedUser.id, text: input }),
-    });
+    const tempId = `temp-${Date.now()}`;
+    const tempMessage: Message = {
+      id: tempId,
+      clientKey: tempId, // NAYA
+      text,
+      senderId: currentUserId,
+      receiverId: selectedUser.id,
+      seen: false,
+      createdAt: new Date().toISOString(),
+    };
 
-    const newMessage = await res.json();
-    setMessages((prev) => [...prev, newMessage]);
+    setMessages((prev) => [...prev, tempMessage]);
     setInput("");
-  };
 
+    try {
+      const res = await fetch("/api/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiverId: selectedUser.id, text }),
+      });
+
+      if (!res.ok) throw new Error("Send failed");
+
+      const savedMessage: Message = await res.json();
+
+      // real message ko wahi clientKey do, taaki React same element rakhe
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === tempId ? { ...savedMessage, clientKey: tempId } : m,
+        ),
+      );
+    } catch (error) {
+      console.error(error);
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
+      setInput(text);
+    }
+  };
+  
   return (
     <div className="h-screen w-full flex bg-[#0a0a0a]">
       {/* ============ LEFT SIDEBAR ============ */}
