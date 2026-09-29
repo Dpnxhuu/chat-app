@@ -75,6 +75,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     token.id = user.id;
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
     token.sessionVersion = dbUser?.sessionVersion ?? 0;
+    token.picture = dbUser?.image
     return token;
   }
 
@@ -88,6 +89,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   if (!dbUser || dbUser.sessionVersion !== token.sessionVersion) {
     throw new Error("SessionExpired");
   }
+
+  token.picture= dbUser.image;
 
   return token;
 },

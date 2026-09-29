@@ -24,6 +24,7 @@ export async function POST(req: Request) {
       name,
       email,
       password: hashedPassword,
+      image: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
     },
   })
 

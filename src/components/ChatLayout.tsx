@@ -2,9 +2,17 @@
 
 import { useState, useEffect, useRef } from "react";
 import { signOut } from "next-auth/react";
+import axios from "axios";
 import Image from "next/image";
-import { MessageSquareText, ArrowLeft } from "lucide-react";
+import {
+  MessageSquareText,
+  ArrowLeft,
+  Camera,
+  BadgeCheck,
+  Lock,
+} from "lucide-react";
 import { pusherClient } from "@/lib/pusher-client";
+import { useRouter } from "next/navigation";
 
 type Message = {
   id: string;
@@ -57,6 +65,41 @@ export default function ChatLayout({
   const [input, setInput] = useState("");
   const bottomRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
+
+  // avatar upload
+  const [preview, setPreview] = useState<string | null>(null);
+  const router = useRouter();
+  const [uploading, setUploading] = useState(false);
+  const avatarSrc = preview ?? currentUserImage;
+
+  // rail (tablet/desktop) card
+  const [open, setOpen] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // mobile header card
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const mobileRef = useRef<HTMLDivElement>(null);
+
+  // naya image prop aate hi local preview hata do
+  useEffect(() => {
+    setPreview(null);
+  }, [currentUserImage]);
+
+  // bahar click/tap karne pe dono cards band (pointerdown = mouse + touch)
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (!dropdownRef.current?.contains(t)) {
+        setPinned(false);
+        setOpen(false);
+      }
+      if (!mobileRef.current?.contains(t)) setMobileOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, []);
 
   // jab bhi selectedUser badle, uske messages fetch karo
   useEffect(() => {
@@ -174,6 +217,147 @@ export default function ChatLayout({
     }
   };
 
+  const handleMouseEnter = () => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setOpen(true), 50);
+  };
+
+  const handleMouseLeave = () => {
+    if (pinned) return; // click karke pin kiya hai toh hover hatne pe band mat karo
+    if (timer.current !== null) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setOpen(false), 250);
+  };
+
+  const handleClick = () => {
+    if (timer.current !== null) clearTimeout(timer.current);
+    const next = !pinned;
+    setPinned(next);
+    setOpen(next);
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = e.target.files?.[0];
+    e.target.value = ""; // taaki same file dobara select ho sake
+    if (!selectedFile) return;
+
+    if (!selectedFile.type.startsWith("image/")) {
+      alert("Sirf image allowed hai");
+      return;
+    }
+    if (selectedFile.size > 2 * 1024 * 1024) {
+      alert("Image 2MB se chhoti honi chahiye");
+      return;
+    }
+
+    const localUrl = URL.createObjectURL(selectedFile);
+    setPreview(localUrl);
+    await handleUpload(selectedFile, localUrl);
+  };
+
+  const handleUpload = async (file: File, localUrl: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      setUploading(true);
+      await axios.post("/api/upload", formData);
+      router.refresh(); // server se naya image prop aa jayega
+    } catch (error) {
+      setPreview(null); // fail hua toh purani image dikhao
+      const message = axios.isAxiosError(error)
+        ? (error.response?.data?.error ?? error.message)
+        : "Unknown error!";
+      console.error("Error:", message);
+      alert(message);
+    } finally {
+      setUploading(false);
+      // preview ko useEffect hatayega jab naya currentUserImage aayega,
+      // isliye yahan revoke karne se image toot sakti hai. Chhota leak chalega.
+      // URL.revokeObjectURL(localUrl);
+    }
+  };
+
+  // Profile card: rail aur mobile dono jagah yahi use hoga
+  const profileCard = (
+    <div className="w-72 max-w-[calc(100vw-2rem)] rounded-2xl border border-white/10 bg-[#111111] p-5 text-white shadow-2xl shadow-black/60 flex flex-col gap-2 items-center">
+      <div className="relative h-20 w-20 rounded-full group/avatar">
+        {avatarSrc ? (
+          <Image
+            src={avatarSrc}
+            alt={currentUserName ?? "U"}
+            width={80}
+            height={80}
+            className="h-20 w-20 rounded-full border border-white/15 object-cover ring-2 ring-white/5"
+          />
+        ) : (
+          <div className="h-20 w-20 rounded-full bg-neutral-700 text-white flex items-center justify-center text-2xl font-semibold border border-white/15 ring-2 ring-white/5">
+            {currentUserName?.[0]?.toUpperCase() ?? "U"}
+          </div>
+        )}
+
+        {/* poore avatar pe tap/click = file picker */}
+        <label
+          onClick={() => setPinned(true)}
+          className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition-opacity md:group-hover/avatar:opacity-100"
+        >
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+          <Camera size={20} className={uploading ? "animate-pulse" : ""} />
+        </label>
+
+        {/* touch screen pe hover nahi hota, isliye chhota camera badge hamesha dikhega */}
+        <span className="pointer-events-none absolute top-6 translate-x-[90%] opacity-60 flex h-7 w-7 items-center justify-center rounded-full border border-white/15 bg-neutral-800 text-white md:hidden">
+          <Camera size={14} />
+        </span>
+      </div>
+
+      <p className="text-[11px] text-white/40">
+        {uploading ? (
+          "Uploading..."
+        ) : (
+          <>
+            <span className="md:hidden">Tap</span>
+            <span className="hidden md:inline">Click</span> photo to change
+          </>
+        )}
+      </p>
+
+      <div className="flex w-full flex-col gap-2.5">
+        <div className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">
+              Name
+            </span>
+            <Lock size={11} className="text-white/30" />
+          </div>
+          <p className="mt-0.5 truncate text-sm font-semibold text-white">
+            {currentUserName}
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-medium uppercase tracking-wide text-white/40">
+              Email
+            </span>
+            <Lock size={11} className="text-white/30" />
+          </div>
+          <p className="mt-0.5 truncate text-sm text-white/80">
+            {currentUserEmail}
+          </p>
+          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-green-500/25 bg-green-500/10 px-2 py-0.5 text-[10px] font-medium text-green-400">
+            <BadgeCheck size={12} />
+            Verified
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     // h-dvh: mobile browser ke address bar ke saath bhi sahi height
     <div className="h-dvh w-full flex bg-[#0a0a0a] overflow-hidden">
@@ -184,7 +368,7 @@ export default function ChatLayout({
           selectedUser ? "hidden md:flex" : "flex"
         } w-full md:max-w-xs h-full border-r border-[#1f1f1f] bg-[#0d0d0d]`}
       >
-        {/* --- Icon rail (sirf desktop pe) --- */}
+        {/* --- Icon rail (sirf tablet/desktop pe) --- */}
         <div className="hidden md:block border border-[#1f1f1f] w-15">
           <div className="flex flex-col h-full justify-between items-center p-4">
             <button
@@ -204,25 +388,35 @@ export default function ChatLayout({
               </span>
             </button>
 
-            <div className="p-2 hover:bg-[#39393962] rounded-full transition-colors delay-20">
-              <span className="relative shrink-0 group">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-700 text-white text-xs font-semibold">
-                  {currentUserImage ? (
-                    <Image
-                      src={currentUserImage}
-                      alt={currentUserName ?? "U"}
-                      width={44}
-                      height={44}
-                      className="h-8 rounded-full shrink-0 object-cover"
-                    />
-                  ) : (
-                    currentUserName?.[0]?.toUpperCase()
-                  )}
-                </span>
-                <span className="group absolute top-1.5 left-13 bg-white/50 text-[12px] text-black/80 opacity-0 group-hover:opacity-100 rounded-lg px-1 transition-all delay-400">
-                  {currentUserEmail}
-                </span>
-              </span>
+            <div
+              ref={dropdownRef}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              className="p-2 group hover:bg-[#39393962] rounded-full cursor-pointer relative transition-colors delay-10"
+            >
+              <div
+                onClick={handleClick}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-neutral-700 text-white text-xs font-semibold"
+              >
+                {avatarSrc ? (
+                  <Image
+                    src={avatarSrc}
+                    alt={currentUserName ?? "U"}
+                    width={44}
+                    height={44}
+                    className="h-8 w-8 rounded-full shrink-0 object-cover"
+                  />
+                ) : (
+                  currentUserName?.[0]?.toUpperCase()
+                )}
+              </div>
+
+              {/* Profile */}
+              {open && (
+                <div className="cursor-default absolute left-full bottom-0 z-50 pl-4">
+                  {profileCard}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -232,18 +426,31 @@ export default function ChatLayout({
             <div className="flex items-center justify-between mb-4 gap-3">
               <div className="flex items-center gap-3 min-w-0">
                 {/* mobile pe apna avatar yaha dikhega (rail hidden hai) */}
-                <div className="md:hidden shrink-0">
-                  {currentUserImage ? (
-                    <Image
-                      src={currentUserImage}
-                      alt={currentUserName ?? "U"}
-                      width={32}
-                      height={32}
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-neutral-700 text-white flex items-center justify-center text-xs font-semibold">
-                      {currentUserName?.[0]?.toUpperCase() ?? "U"}
+                <div ref={mobileRef} className="md:hidden shrink-0 relative">
+                  <button
+                    type="button"
+                    onClick={() => setMobileOpen((v) => !v)}
+                    className="block rounded-full"
+                    aria-label="Open profile"
+                  >
+                    {avatarSrc ? (
+                      <Image
+                        src={avatarSrc}
+                        alt={currentUserName ?? "U"}
+                        width={32}
+                        height={32}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-neutral-700 text-white flex items-center justify-center text-xs font-semibold">
+                        {currentUserName?.[0]?.toUpperCase() ?? "U"}
+                      </div>
+                    )}
+                  </button>
+
+                  {mobileOpen && (
+                    <div className="absolute left-0 top-full z-50 mt-2">
+                      {profileCard}
                     </div>
                   )}
                 </div>
@@ -314,7 +521,9 @@ export default function ChatLayout({
                               </span>
                             </>
                           ) : (
-                            <span className="text-neutral-500">Tap to chat</span>
+                            <span className="text-neutral-500">
+                              Tap to chat
+                            </span>
                           )}
                         </p>
                       </div>
@@ -392,8 +601,8 @@ export default function ChatLayout({
                     )
                     .map((msg) => {
                       const isMe = msg.senderId === currentUserId;
-                      const avatarSrc = isMe
-                        ? currentUserImage
+                      const msgAvatarSrc = isMe
+                        ? avatarSrc
                         : selectedUser.image;
                       const avatarFallback = isMe
                         ? (currentUserName?.[0]?.toUpperCase() ?? "U")
@@ -407,9 +616,9 @@ export default function ChatLayout({
                           <div
                             className={`flex items-end gap-2 max-w-full ${isMe ? "flex-row-reverse" : ""}`}
                           >
-                            {avatarSrc ? (
+                            {msgAvatarSrc ? (
                               <Image
-                                src={avatarSrc}
+                                src={msgAvatarSrc}
                                 alt="avatar"
                                 width={28}
                                 height={28}
