@@ -10,6 +10,7 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false)
 
   const searchParams = useSearchParams();
   const verified = searchParams.get("verified");
@@ -18,7 +19,7 @@ function Login() {
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setError("");
-
+    setLoading(true)
     const res = await signIn("credentials", {
       email,
       password,
@@ -30,6 +31,8 @@ function Login() {
     } else {
       router.replace("/home");
     }
+
+    setLoading(false);
   };
 
   return (
@@ -226,7 +229,7 @@ function Login() {
               cursor: "pointer",
             }}
           >
-            Sign in with Credentials
+            {loading? "Signing in..." : "Sign in with Credentials"}
           </button>
         </form>
         <p
