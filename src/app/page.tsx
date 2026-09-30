@@ -26,7 +26,7 @@ function Login() {
     });
 
     if (res?.error) {
-      setError("Login failed — email ya password galat hai");
+      setError("Login failed. The email or password you entered is incorrect.");
     } else {
       router.replace("/home");
     }
@@ -89,7 +89,7 @@ function Login() {
               textAlign: "center",
             }}
           >
-            Email verify ho gaya! Ab login kar sakte ho.
+            Your email has been verified successfully. You can now log in.
           </p>
         )}
 

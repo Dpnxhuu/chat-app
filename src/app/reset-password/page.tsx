@@ -11,7 +11,7 @@ function ResetPassword() {
   const router = useRouter()
   const token = searchParams.get("token")
 
-  // YE NAYA CHECK HAI — agar URL me token hi nahi hai, form dikhao mat
+  // If the token is missing from the URL, do not render the form
   if (!token) {
     return (
       <div
@@ -24,7 +24,7 @@ function ResetPassword() {
         }}
       >
         <p style={{ color: "#f87171", fontSize: 15 }}>
-          Invalid link — koi reset request nahi mila.
+          Invalid link. No password reset request was found.
         </p>
       </div>
     )
@@ -43,7 +43,7 @@ function ResetPassword() {
     const data = await res.json()
 
     if (!res.ok) {
-      setError(data.error || "Kuch galat ho gaya")
+      setError(data.error || "Something went wrong. Please try again.")
       return
     }
 
@@ -72,18 +72,18 @@ function ResetPassword() {
         }}
       >
         <h2 style={{ color: "#f5f5f5", fontSize: 22, textAlign: "center", marginBottom: 20 }}>
-          Naya password set karo
+          Set a new password
         </h2>
 
         {success ? (
           <p style={{ color: "#4ade80", textAlign: "center" }}>
-            Password reset ho gaya! Login page pe redirect ho raha hai...
+            Your password has been reset successfully. Redirecting to the login page...
           </p>
         ) : (
           <form onSubmit={handleSubmit}>
             <input
               type="password"
-              placeholder="Naya password"
+              placeholder="New password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={{

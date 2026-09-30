@@ -24,14 +24,14 @@ export default function ForgotPasswordPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || "Kuch galat ho gaya")
+        setError(data.error || "Something went wrong. Please try again.")
         setLoading(false)
         return
       }
 
       setSuccess(true)
     } catch {
-      setError("Server se connect nahi ho paya")
+      setError("Unable to connect to the server. Please try again later.")
     } finally {
       setLoading(false)
     }
@@ -78,7 +78,7 @@ export default function ForgotPasswordPage() {
             marginBottom: 20,
           }}
         >
-          Email daalo, reset link bhej denge
+          Enter your email and we'll send you a reset link
         </p>
 
         {success ? (
@@ -94,7 +94,7 @@ export default function ForgotPasswordPage() {
               lineHeight: 1.5,
             }}
           >
-            Agar ye email registered hai, reset link bhej diya gaya hai. Apna inbox check karo.
+            If this email is registered, a password reset link has been sent. Please check your inbox.
           </p>
         ) : (
           <form onSubmit={handleSubmit}>
@@ -159,7 +159,7 @@ export default function ForgotPasswordPage() {
             marginTop: 16,
           }}
         >
-          Yaad aa gaya password?{" "}
+          Remember your password?{" "}
           <Link href="/" style={{ color: "#f5f5f5" }}>
             Login
           </Link>

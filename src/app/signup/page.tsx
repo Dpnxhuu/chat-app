@@ -27,14 +27,14 @@ export default function SignupPage() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error || "Kuch galat ho gaya")
+        setError(data.error || "Something went wrong. Please try again.")
         setLoading(false)
         return
       }
 
       setSuccess(true)
     } catch {
-      setError("Server se connect nahi ho paya")
+      setError("Unable to connect to the server. Please try again later.")
     } finally {
       setLoading(false)
     }
@@ -157,7 +157,7 @@ export default function SignupPage() {
               lineHeight: 1.5,
             }}
           >
-            Signup successful! Apna email check karo aur verification link pe click karo.
+            Signup successful! Please check your email and click the verification link to activate your account.
           </p>
         ) : (
           <form onSubmit={handleSubmit}>
