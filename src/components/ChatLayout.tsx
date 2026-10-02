@@ -244,8 +244,8 @@ export default function ChatLayout({
       alert("Sirf image allowed hai");
       return;
     }
-    if (selectedFile.size > 2 * 1024 * 1024) {
-      alert("Image 2MB se chhoti honi chahiye");
+    if (selectedFile.size > 10 * 1024 * 1024) {
+      alert("Image size should be less than 10 MB");
       return;
     }
 
