@@ -23,8 +23,8 @@ export async function POST(req: Request) {
   if (!file.type.startsWith("image/")) {
     return NextResponse.json({ error: "Only images allowed" }, { status: 400 });
   }
-  if (file.size > 2 * 1024 * 1024) {
-    return NextResponse.json({ error: "Max 2MB" }, { status: 400 });
+  if (file.size > 10 * 1024 * 1024) {
+    return NextResponse.json({ error: "Max size 10MB" }, { status: 400 });
   }
 
   try {
